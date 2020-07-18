@@ -45,6 +45,10 @@ func (m HexoMeta) WriteHeader(w io.Writer) error {
 
 func main() {
 
+	if len(os.Args) == 1 {
+		log.Fatal("url argument is required")
+	}
+
 	url := os.Args[1]
 	if url == "" {
 		log.Fatal("URL is required variable")
@@ -95,7 +99,7 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	lineNo := 1
+	lineNo := 0
 	scanner := bufio.NewScanner(resp.Body)
 	var hexoArticleContents []string
 
@@ -103,7 +107,7 @@ func main() {
 		line := scanner.Text()
 		lineNo++
 
-		if 1 <= lineNo && lineNo <= 7 {
+		if 1 <= lineNo && lineNo <= 6 {
 			if strings.HasPrefix(line, "title") {
 				title = line[len("title: "):]
 				articleFileName = filepath.Join(postRoot, ymd+"_"+strings.ReplaceAll(title, " ", "_")+".md")
@@ -117,7 +121,7 @@ func main() {
 			continue
 		}
 
-		if 7 < lineNo && lineNo < 12 {
+		if 6 < lineNo && lineNo < 14 {
 			if strings.Trim(line, " ") != "" && !strings.HasPrefix(line, "#") {
 				regex := regexp.MustCompile(`\(.*\)`) // リンクがLedeに出ると可読性に欠けるので削除
 				simpleLine := regex.ReplaceAllString(line, "")
@@ -157,6 +161,11 @@ func main() {
 		hexoArticleContents = append(hexoArticleContents, line)
 	}
 
+	if lineNo == 0 {
+		// URL不正？
+		log.Fatal("Specific URL page does not exists payload: ", url)
+	}
+
 	if len(tags) == 1 {
 		tags = append([]string{"Programming"}, tags...)
 	}
@@ -167,8 +176,11 @@ func main() {
 		if strings.ToLower(tag) == "infrastructure" {
 			category = "Infrastructure"
 			updateTags = remove(tags, i)
-		} else if strings.ToLower(tag) == "programming" {
+		} else if strings.ToLower(tag) == "programming" || IsProgrammingCategory(tag) {
 			category = "Programming"
+			updateTags = remove(tags, i)
+		} else if IsDBCategory(tag) {
+			category = "DB"
 			updateTags = remove(tags, i)
 		} else if strings.ToLower(tag) == "culture" {
 			category = "culture"
@@ -182,7 +194,7 @@ func main() {
 		}
 	}
 	if category == "" {
-		category = "Culture"
+		category = "Infrastructure"
 	}
 
 	hexoMeta := &HexoMeta{
@@ -193,24 +205,24 @@ func main() {
 		Thumbnail: path.Join("/images", ymd, "thumbnail"+thumbnailExt),
 		Author:    author,
 		Featured:  true,
-		Lede:      lede,
+		Lede:      "\""+ lede+ "\"",
 	}
 
 	file, err := os.OpenFile(articleFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
-		log.Fatal("create post file", err)
+		log.Fatal("create post file: ", articleFileName, err)
 	}
 	defer file.Close()
 
 	if err = hexoMeta.WriteHeader(file); err != nil {
-		log.Fatal("write hexo header", err)
+		log.Fatal("write hexo header: ", err)
 	}
 
 	// 本文の出力
 	for _, line := range hexoArticleContents {
 		_, err := file.Write([]byte(line))
 		if err != nil {
-			log.Fatal("save post file", err)
+			log.Fatal("save post file: ", err)
 		}
 		fmt.Fprintln(file) // 改行
 	}
@@ -304,4 +316,33 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 
 func remove(slice []string, s int) []string {
 	return append(slice[:s], slice[s+1:]...)
+}
+
+// pgm list
+var pgm = map[string]bool{
+	"go":true,
+	"golang":true,
+	"python":true,
+	"ruby":true,
+	"r":true,
+	"scala":true,
+	"java":true,
+	"c":true,
+	"clang":true,
+	"c++":true,
+	"shell":true,
+}
+
+func IsProgrammingCategory(tag string) bool{
+	return pgm[strings.ToLower(tag)]
+}
+
+var db = map[string]bool{
+	"sql":true,
+	"db":true,
+	"rdb":true,
+}
+
+func IsDBCategory(tag string) bool{
+	return db[strings.ToLower(tag)]
 }
