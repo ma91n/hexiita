@@ -259,8 +259,8 @@ type ArticleImage struct {
 }
 
 type XMLImage struct {
-	URL      string `xml:"src"`
-	FileName string `xml:"alt"`
+	URL      string `xml:"src,attr"`
+	FileName string `xml:"alt,attr"`
 }
 
 func ExtractImageURL(line string) (*ArticleImage, error) {
@@ -293,8 +293,8 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 	if strings.Contains(line, "<img") && strings.Contains(line, "src=") {
 
 		tagStart := strings.Index(line, "<img")
-		tagEnd := strings.Index(line, ">")
-		xmlElm := line[tagStart:tagEnd]
+		tagEnd := strings.Index(line, ">") + 1
+		xmlElm := line[tagStart:tagEnd] + "</img>" // XMLパースのためにタグを追加
 
 		var xi XMLImage
 		if err := xml.Unmarshal([]byte(xmlElm), &xi); err != nil {
