@@ -274,6 +274,9 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		nameEnd := strings.Index(line[nameStart:], "]") + nameStart
 		fileName := line[nameStart:nameEnd]
 
+		// ファイル名に空白が含まれている場合は、アンダースコアに変換
+		fileName = strings.ReplaceAll(fileName, " ", "_")
+
 		if len(fileName) > 100 {
 			// クリップボードから直接貼り付けたときに、意味のない長いファイル名になるので短くする
 			fileName = fileName[:15] + filepath.Ext(fileName)
@@ -282,6 +285,7 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		start := strings.Index(line, "https")
 		end := strings.Index(line[start:], ")") + start
 		url := line[start:end]
+
 
 		return &ArticleImage{
 			URL:      url,
@@ -300,9 +304,13 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		if err := xml.Unmarshal([]byte(xmlElm), &xi); err != nil {
 			return nil, fmt.Errorf("image xml tag parse: %w", err)
 		}
+
+		// ファイル名に空白が含まれている場合は、アンダースコアに変換
+		fileName := strings.ReplaceAll(xi.FileName, " ", "_")
+
 		return &ArticleImage{
 			URL:      xi.URL,
-			FileName: xi.FileName,
+			FileName: fileName,
 			HasImage: true,
 		}, nil
 	}
