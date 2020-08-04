@@ -131,7 +131,7 @@ func main() {
 
 		articleImage, err := ExtractImageURL(line)
 		if err != nil {
-			log.Fatalf("image link parse: %v", err)
+			log.Fatalf("image link parse: %v: %s", err, line)
 		}
 
 		if articleImage.HasImage {
