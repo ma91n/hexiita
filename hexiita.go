@@ -4,6 +4,14 @@ import (
 	"bufio"
 	"encoding/xml"
 	"fmt"
+	"github.com/nfnt/resize"
+	"image"
+	"image/gif"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/jpeg"
+	"image/png"
+	_ "image/png"
 	"io"
 	"log"
 	"net/http"
@@ -13,6 +21,12 @@ import (
 	"regexp"
 	"strings"
 	"time"
+)
+
+// サムネイル画像のMax width [px]
+const (
+	MaxThumbnailWidthPx = 300
+	MaxImageWidth       = 1200
 )
 
 type HexoMeta struct {
@@ -135,6 +149,7 @@ func main() {
 		}
 
 		if articleImage.HasImage {
+			articleImage.MaxWidthPx = MaxImageWidth
 			if err := download(imageRoot, articleImage); err != nil {
 				log.Fatal("download image", err)
 			}
@@ -246,6 +261,35 @@ func download(dir string, articleImage *ArticleImage) error {
 	if err != nil {
 		return fmt.Errorf("create image file: %w", err)
 	}
+	defer file.Close()
+
+	if articleImage.MaxWidthPx != 0 {
+		// resize target
+		imgSrc, _, err := image.Decode(imgResp.Body)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%+v\n", articleImage)
+			return err
+		}
+
+		width := imgSrc.Bounds().Max.X - imgSrc.Bounds().Min.X
+		if width > articleImage.MaxWidthPx {
+			resizedImg := resize.Resize(uint(articleImage.MaxWidthPx), 0, imgSrc, resize.Lanczos3)
+
+			ext := strings.Replace(strings.ToLower(filepath.Ext(articleImage.FileName)), ".jpeg", ".jpg", 1)
+
+			if ext == ".jpg" {
+				return jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 100})
+			} else if ext == ".png" {
+				return png.Encode(file, resizedImg)
+			} else if ext == ".git" {
+				return gif.Encode(file, resizedImg, &gif.Options{})
+			} else {
+				fmt.Fprintf(os.Stderr, "unknown extention: %v", ext)
+			}
+		}
+	}
+
+	// Originalをそのまま利用
 	if _, err = io.Copy(file, imgResp.Body); err != nil {
 		return fmt.Errorf("write image file to local: %w", err)
 	}
@@ -254,18 +298,20 @@ func download(dir string, articleImage *ArticleImage) error {
 
 func downloadWithThumbnail(dir string, articleImage *ArticleImage) error {
 	thumbnailImage := &ArticleImage{
-		URL:      articleImage.URL,
-		FileName: "thumbnail" + filepath.Ext(articleImage.FileName), // パスを書き換え
-		HasImage: articleImage.HasImage,
+		URL:        articleImage.URL,
+		FileName:   "thumbnail" + filepath.Ext(articleImage.FileName), // パスを書き換え
+		HasImage:   articleImage.HasImage,
+		MaxWidthPx: MaxThumbnailWidthPx,
 	}
 
 	return download(dir, thumbnailImage)
 }
 
 type ArticleImage struct {
-	URL      string
-	FileName string
-	HasImage bool
+	URL        string
+	FileName   string
+	HasImage   bool
+	MaxWidthPx int
 }
 
 type XMLImage struct {
@@ -295,7 +341,6 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		start := strings.Index(line, "https")
 		end := strings.Index(line[start:], ")") + start
 		url := line[start:end]
-
 
 		return &ArticleImage{
 			URL:      url,
