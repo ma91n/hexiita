@@ -197,15 +197,20 @@ func main() {
 		category = "Infrastructure"
 	}
 
+	metaTitle := title
+	if !strings.HasPrefix(title, `"`) {
+		metaTitle = `"` + metaTitle + `"`
+	}
+
 	hexoMeta := &HexoMeta{
-		Title:     title,
+		Title:     metaTitle,
 		Date:      ymdTime.Format("2006/01/02 15:04:05"),
 		Tags:      updateTags,
 		Category:  category,
 		Thumbnail: path.Join("/images", ymd, "thumbnail"+thumbnailExt),
 		Author:    author,
 		Featured:  true,
-		Lede:      "\""+ lede+ "\"",
+		Lede:      "\"" + lede + "\"",
 	}
 
 	file, err := os.OpenFile(articleFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
@@ -320,29 +325,29 @@ func remove(slice []string, s int) []string {
 
 // pgm list
 var pgm = map[string]bool{
-	"go":true,
-	"golang":true,
-	"python":true,
-	"ruby":true,
-	"r":true,
-	"scala":true,
-	"java":true,
-	"c":true,
-	"clang":true,
-	"c++":true,
-	"shell":true,
+	"go":     true,
+	"golang": true,
+	"python": true,
+	"ruby":   true,
+	"r":      true,
+	"scala":  true,
+	"java":   true,
+	"c":      true,
+	"clang":  true,
+	"c++":    true,
+	"shell":  true,
 }
 
-func IsProgrammingCategory(tag string) bool{
+func IsProgrammingCategory(tag string) bool {
 	return pgm[strings.ToLower(tag)]
 }
 
 var db = map[string]bool{
-	"sql":true,
-	"db":true,
-	"rdb":true,
+	"sql": true,
+	"db":  true,
+	"rdb": true,
 }
 
-func IsDBCategory(tag string) bool{
+func IsDBCategory(tag string) bool {
 	return db[strings.ToLower(tag)]
 }
