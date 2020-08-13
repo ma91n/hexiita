@@ -253,8 +253,13 @@ func download(dir string, articleImage *ArticleImage) error {
 }
 
 func downloadWithThumbnail(dir string, articleImage *ArticleImage) error {
-	articleImage.FileName = "thumbnail" + filepath.Ext(articleImage.FileName)
-	return download(dir, articleImage)
+	thumbnailImage := &ArticleImage{
+		URL:      articleImage.URL,
+		FileName: "thumbnail" + filepath.Ext(articleImage.FileName), // パスを書き換え
+		HasImage: articleImage.HasImage,
+	}
+
+	return download(dir, thumbnailImage)
 }
 
 type ArticleImage struct {
