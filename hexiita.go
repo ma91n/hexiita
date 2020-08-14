@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"github.com/nfnt/resize"
@@ -13,12 +14,14 @@ import (
 	"image/png"
 	_ "image/png"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -28,6 +31,8 @@ const (
 	MaxThumbnailWidthPx = 300
 	MaxImageWidth       = 1200
 )
+
+var fileNameMap = map[string]int{}
 
 type HexoMeta struct {
 	Title     string
@@ -150,6 +155,16 @@ func main() {
 
 		if articleImage.HasImage {
 			articleImage.MaxWidthPx = MaxImageWidth
+			count := fileNameMap[articleImage.FileName]
+			count++
+			fileNameMap[articleImage.FileName] = count
+			if count > 1 {
+				// #16
+				ext := filepath.Ext(articleImage.FileName)
+				fileName := strings.Replace(articleImage.FileName, ext, "", 1)
+				articleImage.FileName = fileName + "_" + strconv.Itoa(count) + ext
+			}
+
 			if err := download(imageRoot, articleImage); err != nil {
 				log.Fatal("download image", err)
 			}
@@ -262,10 +277,14 @@ func download(dir string, articleImage *ArticleImage) error {
 		return fmt.Errorf("create image file: %w", err)
 	}
 	defer file.Close()
+	img, err := ioutil.ReadAll(imgResp.Body)
+	if err != nil {
+		return err
+	}
 
 	if articleImage.MaxWidthPx != 0 {
 		// resize target
-		imgSrc, _, err := image.Decode(imgResp.Body)
+		imgSrc, _, err := image.Decode(bytes.NewBuffer(img))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", articleImage)
 			return err
@@ -290,7 +309,7 @@ func download(dir string, articleImage *ArticleImage) error {
 	}
 
 	// Originalをそのまま利用
-	if _, err = io.Copy(file, imgResp.Body); err != nil {
+	if _, err = io.Copy(file, bytes.NewBuffer(img)); err != nil {
 		return fmt.Errorf("write image file to local: %w", err)
 	}
 	return nil
