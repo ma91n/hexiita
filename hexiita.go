@@ -100,13 +100,15 @@ func main() {
 		fmt.Println("mkdir", err)
 	}
 
-	var articleFileName string // 本文をパースしてから決定
-	var title string
-	var author string
-	var tags []string
-	var lede string
-	thumbnail := true       // 初回の画像をサムネイルにする
-	var thumbnailExt string // png, jpeg
+	var (
+		articleFileName string // 本文をパースしてから決定
+		title           string
+		author          string
+		tags            []string
+		lede            string
+		thumbnailExt    string // png, jpeg
+		thumbnail       = true // 初回の画像をサムネイルにする
+	)
 
 	if !strings.HasSuffix(url, ".md") {
 		url = url + ".md"
@@ -129,6 +131,10 @@ func main() {
 		if 1 <= lineNo && lineNo <= 6 {
 			if strings.HasPrefix(line, "title") {
 				title = line[len("title: "):]
+
+				// https://github.com/laqiiz/hexiita/issues/18
+				title = strings.ReplaceAll(title, "/", "／")
+
 				articleFileName = filepath.Join(postRoot, ymd+"_"+strings.ReplaceAll(title, " ", "_")+".md")
 			}
 			if strings.HasPrefix(line, "tags") {
