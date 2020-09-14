@@ -306,7 +306,7 @@ func download(dir string, articleImage *ArticleImage) error {
 				return jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 100})
 			} else if ext == ".png" {
 				return png.Encode(file, resizedImg)
-			} else if ext == ".git" {
+			} else if ext == ".gif" {
 				return gif.Encode(file, resizedImg, &gif.Options{})
 			} else {
 				fmt.Fprintf(os.Stderr, "unknown extention: %v", ext)
