@@ -367,6 +367,10 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		end := strings.Index(line[start:], ")") + start
 		url := line[start:end]
 
+		// https://github.com/laqiiz/hexiita/issues/22
+		// ![2020-09-23_20h26_14.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/717995/8e698035-ea79-cf21-ce93-f70b770e0e15.png "実装した画面")
+		url = strings.Split(url, " ")[0]
+
 		return &ArticleImage{
 			URL:      url,
 			FileName: fileName,
