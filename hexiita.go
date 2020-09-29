@@ -392,6 +392,10 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		// ファイル名に空白が含まれている場合は、アンダースコアに変換
 		fileName := strings.ReplaceAll(xi.FileName, " ", "_")
 
+		if fileName == "" {
+			fileName = strings.Replace(strings.Split(xi.URL, "/")[len(strings.Split(xi.URL, "/")) -1], "https://", "", 1)
+		}
+
 		return &ArticleImage{
 			URL:      xi.URL,
 			FileName: fileName,
