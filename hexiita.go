@@ -37,6 +37,7 @@ var fileNameMap = map[string]int{}
 type HexoMeta struct {
 	Title     string
 	Date      string // like: 2020/07/16 10:49:27
+	PostID    string
 	Tags      []string
 	Category  string
 	Thumbnail string
@@ -48,6 +49,7 @@ type HexoMeta struct {
 func (m HexoMeta) WriteHeader(w io.Writer) error {
 	_, _ = fmt.Fprintf(w, "title: %s\n", m.Title)
 	_, _ = fmt.Fprintf(w, "date: %s\n", m.Date)
+	_, _ = fmt.Fprintf(w, "postid: %s\n", m.PostID)
 	_, _ = fmt.Fprintf(w, "tag:\n")
 	for _, tag := range m.Tags {
 		_, _ = fmt.Fprintf(w, "  - %s\n", tag)
@@ -73,12 +75,20 @@ func main() {
 		log.Fatal("URL is required variable")
 	}
 
+	var postID = "a"
+
 	var ymd string
 	if len(os.Args) == 2 {
 		ymd = time.Now().Format("20060102")
 		fmt.Println("ymd is ", ymd)
 	} else {
-		ymd = os.Args[2]
+		arg := os.Args[2]
+		if len(arg) == 9 {
+			ymd = arg[0:9]
+			postID = arg[9:]
+		} else {
+			ymd = os.Args[2] + "a"
+		}
 	}
 
 	if len(ymd) != 8 {
@@ -241,6 +251,7 @@ func main() {
 	hexoMeta := &HexoMeta{
 		Title:     metaTitle,
 		Date:      ymdTime.Format("2006/01/02 15:04:05"),
+		PostID:    postID,
 		Tags:      updateTags,
 		Category:  category,
 		Thumbnail: path.Join("/images", ymd, "thumbnail"+thumbnailExt),
@@ -393,7 +404,7 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		fileName := strings.ReplaceAll(xi.FileName, " ", "_")
 
 		if fileName == "" {
-			fileName = strings.Replace(strings.Split(xi.URL, "/")[len(strings.Split(xi.URL, "/")) -1], "https://", "", 1)
+			fileName = strings.Replace(strings.Split(xi.URL, "/")[len(strings.Split(xi.URL, "/"))-1], "https://", "", 1)
 		}
 
 		return &ArticleImage{
