@@ -84,17 +84,19 @@ func main() {
 	} else {
 		arg := os.Args[2]
 		if len(arg) == 9 {
-			ymd = arg[0:9]
-			postID = arg[9:]
+			ymd = arg
+			postID = arg[8:]
 		} else {
 			ymd = os.Args[2] + "a"
 		}
 	}
 
+	fmt.Println(ymd, postID)
+
 	if len(ymd) != 9 {
 		log.Fatal("ymd must be YYYYMMDD format")
 	}
-	ymdTime, err := time.Parse("20060102", ymd[0:9])
+	ymdTime, err := time.Parse("20060102", ymd[0:8])
 	if err != nil {
 		log.Fatal("ymd is invalid format")
 	}
