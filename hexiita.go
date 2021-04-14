@@ -91,7 +91,7 @@ func main() {
 		}
 	}
 
-	if len(ymd) != 8 {
+	if len(ymd) != 9 {
 		log.Fatal("ymd must be YYYYMMDD format")
 	}
 	ymdTime, err := time.Parse("20060102", ymd)
