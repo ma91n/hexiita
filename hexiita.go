@@ -94,7 +94,7 @@ func main() {
 	if len(ymd) != 9 {
 		log.Fatal("ymd must be YYYYMMDD format")
 	}
-	ymdTime, err := time.Parse("20060102", ymd)
+	ymdTime, err := time.Parse("20060102", ymd[0:9])
 	if err != nil {
 		log.Fatal("ymd is invalid format")
 	}
