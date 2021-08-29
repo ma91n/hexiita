@@ -5,14 +5,10 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"github.com/nfnt/resize"
 	"image"
 	"image/gif"
-	_ "image/gif"
 	"image/jpeg"
-	_ "image/jpeg"
 	"image/png"
-	_ "image/png"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,6 +20,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nfnt/resize"
 )
 
 // サムネイル画像のMax width [px]
@@ -80,20 +78,20 @@ func main() {
 	var ymd string
 	if len(os.Args) == 2 {
 		ymd = time.Now().Format("20060102")
-		fmt.Println("ymd is ", ymd)
+		fmt.Println("ymd is", ymd)
 	} else {
 		arg := os.Args[2]
 		if len(arg) == 9 {
-			ymd = arg
+			ymd = arg[0:8]
 			postID = arg[8:]
 		} else {
-			ymd = os.Args[2] + "a"
+			ymd = os.Args[2]
 		}
 	}
 
 	fmt.Println(ymd, postID)
 
-	if len(ymd) != 9 {
+	if len(ymd) != 8 {
 		log.Fatal("ymd must be YYYYMMDD format")
 	}
 	ymdTime, err := time.Parse("20060102", ymd[0:8])
@@ -145,9 +143,9 @@ func main() {
 				title = line[len("title: "):]
 
 				// https://github.com/laqiiz/hexiita/issues/18
-				title = strings.ReplaceAll(title, "/", "／")
+				escapedTitle := strings.ReplaceAll(title, "/", "／")
 
-				articleFileName = filepath.Join(postRoot, ymd+"_"+strings.ReplaceAll(title, " ", "_")+".md")
+				articleFileName = filepath.Join(postRoot, ymd+"_"+strings.ReplaceAll(escapedTitle, " ", "_")+".md")
 			}
 			if strings.HasPrefix(line, "tags") {
 				tags = strings.Split(line[len("tags: "):], " ")
@@ -183,9 +181,11 @@ func main() {
 				articleImage.FileName = fileName + "_" + strconv.Itoa(count) + ext
 			}
 
-			if err := download(imageRoot, articleImage); err != nil {
+			a, err := download(imageRoot, articleImage)
+			if err != nil {
 				log.Fatal("download image", err)
 			}
+			articleImage = a
 
 			if thumbnail {
 				if err := downloadWithThumbnail(imageRoot, articleImage); err != nil {
@@ -196,7 +196,7 @@ func main() {
 			}
 
 			// Alt textはHexoで表示されてしまうのでなしにする。本当はあった方が良いとは思う
-			imgLine := fmt.Sprintf("![](%s)", path.Join("/images", ymd, articleImage.FileName))
+			imgLine := fmt.Sprintf(`<img src="%s" alt="%s" width="%d" height="%d" loading="lazy"`, path.Join("/images", ymd, "", articleImage.FileName), articleImage.AltText, articleImage.Width, articleImage.Height)
 			hexoArticleContents = append(hexoArticleContents, imgLine)
 			continue
 		}
@@ -284,21 +284,21 @@ func main() {
 	fmt.Println("finished")
 }
 
-func download(dir string, articleImage *ArticleImage) error {
+func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 	imgResp, err := http.Get(articleImage.URL)
 	if err != nil {
-		return fmt.Errorf("cannot access image url: %w", err)
+		return nil, fmt.Errorf("cannot access image url: %w", err)
 	}
 	defer imgResp.Body.Close()
 
 	file, err := os.OpenFile(filepath.Join(dir, articleImage.FileName), os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		return fmt.Errorf("create image file: %w", err)
+		return nil, fmt.Errorf("create image file: %w", err)
 	}
 	defer file.Close()
 	img, err := ioutil.ReadAll(imgResp.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if articleImage.MaxWidthPx != 0 {
@@ -306,21 +306,28 @@ func download(dir string, articleImage *ArticleImage) error {
 		imgSrc, _, err := image.Decode(bytes.NewBuffer(img))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", articleImage)
-			return err
+			return nil, err
 		}
 
 		width := imgSrc.Bounds().Max.X - imgSrc.Bounds().Min.X
+
+		articleImage.Width = width
+		articleImage.Height = imgSrc.Bounds().Max.Y - -imgSrc.Bounds().Min.Y
+
 		if width > articleImage.MaxWidthPx {
 			resizedImg := resize.Resize(uint(articleImage.MaxWidthPx), 0, imgSrc, resize.Lanczos3)
+
+			articleImage.Width = resizedImg.Bounds().Max.X - resizedImg.Bounds().Min.X
+			articleImage.Height = resizedImg.Bounds().Max.Y - resizedImg.Bounds().Min.Y
 
 			ext := strings.Replace(strings.ToLower(filepath.Ext(articleImage.FileName)), ".jpeg", ".jpg", 1)
 
 			if ext == ".jpg" {
-				return jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 100})
+				return nil, jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 100})
 			} else if ext == ".png" {
-				return png.Encode(file, resizedImg)
+				return nil, png.Encode(file, resizedImg)
 			} else if ext == ".gif" {
-				return gif.Encode(file, resizedImg, &gif.Options{})
+				return nil, gif.Encode(file, resizedImg, &gif.Options{})
 			} else {
 				fmt.Fprintf(os.Stderr, "unknown extention: %v", ext)
 			}
@@ -329,9 +336,9 @@ func download(dir string, articleImage *ArticleImage) error {
 
 	// Originalをそのまま利用
 	if _, err = io.Copy(file, bytes.NewBuffer(img)); err != nil {
-		return fmt.Errorf("write image file to local: %w", err)
+		return nil, fmt.Errorf("write image file to local: %w", err)
 	}
-	return nil
+	return articleImage, nil
 }
 
 func downloadWithThumbnail(dir string, articleImage *ArticleImage) error {
@@ -342,14 +349,18 @@ func downloadWithThumbnail(dir string, articleImage *ArticleImage) error {
 		MaxWidthPx: MaxThumbnailWidthPx,
 	}
 
-	return download(dir, thumbnailImage)
+	_, err := download(dir, thumbnailImage)
+	return err
 }
 
 type ArticleImage struct {
 	URL        string
 	FileName   string
+	AltText    string
 	HasImage   bool
 	MaxWidthPx int
+	Width      int
+	Height     int
 }
 
 type XMLImage struct {
@@ -387,6 +398,7 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		return &ArticleImage{
 			URL:      url,
 			FileName: fileName,
+			AltText:  fileName,
 			HasImage: true,
 		}, nil
 	}
@@ -412,6 +424,7 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		return &ArticleImage{
 			URL:      xi.URL,
 			FileName: fileName,
+			AltText:  xi.FileName,
 			HasImage: true,
 		}, nil
 	}

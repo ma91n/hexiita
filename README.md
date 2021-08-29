@@ -1,9 +1,10 @@
 # hexiita
+
 Hexiita is a migration tool that convert Qiita to Hexo format.
 
 ## Installation
 
-go get -u github.com/laqiiz/hexiita
+go install github.com/laqiiz/hexiita@latest
 
 ## Rquirements
 
