@@ -323,11 +323,11 @@ func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 			ext := strings.Replace(strings.ToLower(filepath.Ext(articleImage.FileName)), ".jpeg", ".jpg", 1)
 
 			if ext == ".jpg" {
-				return nil, jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 100})
+				return articleImage, jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 100})
 			} else if ext == ".png" {
-				return nil, png.Encode(file, resizedImg)
+				return articleImage, png.Encode(file, resizedImg)
 			} else if ext == ".gif" {
-				return nil, gif.Encode(file, resizedImg, &gif.Options{})
+				return articleImage, gif.Encode(file, resizedImg, &gif.Options{})
 			} else {
 				fmt.Fprintf(os.Stderr, "unknown extention: %v", ext)
 			}
