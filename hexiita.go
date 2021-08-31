@@ -198,7 +198,7 @@ func main() {
 			}
 
 			// Alt textはHexoで表示されてしまうのでなしにする。本当はあった方が良いとは思う
-			imgLine := fmt.Sprintf(`<img src="%s" alt="%s" width="%d" height="%d" loading="lazy"`, path.Join("/images", ymd, "", articleImage.FileName), articleImage.AltText, articleImage.Width, articleImage.Height)
+			imgLine := fmt.Sprintf(`<img src="%s" alt="%s" width="%d" height="%d" loading="lazy">`, path.Join("/images", ymd, "", articleImage.FileName), articleImage.AltText, articleImage.Width, articleImage.Height)
 			hexoArticleContents = append(hexoArticleContents, imgLine)
 			continue
 		}
