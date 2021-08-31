@@ -94,6 +94,8 @@ func main() {
 	if len(ymd) != 8 {
 		log.Fatal("ymd must be YYYYMMDD format")
 	}
+	ymd = ymd + postID
+
 	ymdTime, err := time.Parse("20060102", ymd[0:8])
 	if err != nil {
 		log.Fatal("ymd is invalid format")
