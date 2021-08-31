@@ -1,4 +1,4 @@
-module github.com/laqiiz/hexiita
+module github.com/ma91n/hexiita
 
 go 1.16
 
