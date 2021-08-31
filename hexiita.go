@@ -331,7 +331,7 @@ func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 			} else if ext == ".gif" {
 				return articleImage, gif.Encode(file, resizedImg, &gif.Options{})
 			} else {
-				fmt.Fprintf(os.Stderr, "unknown extention: %v", ext)
+				fmt.Fprintf(os.Stderr, "unknown extention: %s\n", articleImage.FileName)
 			}
 		}
 	}
@@ -392,6 +392,11 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		start := strings.Index(line, "https")
 		end := strings.Index(line[start:], ")") + start
 		url := line[start:end]
+
+		// 拡張子がない場合はURLから取得
+		if filepath.Ext(fileName) == "" {
+			fileName = fileName  + filepath.Ext(url)
+		}
 
 		// https://github.com/laqiiz/hexiita/issues/22
 		// ![2020-09-23_20h26_14.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/717995/8e698035-ea79-cf21-ce93-f70b770e0e15.png "実装した画面")
