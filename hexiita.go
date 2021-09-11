@@ -428,6 +428,11 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 			fileName = strings.Replace(strings.Split(xi.URL, "/")[len(strings.Split(xi.URL, "/"))-1], "https://", "", 1)
 		}
 
+		// もしaltタグに拡張子がない場合は、補填
+		if filepath.Ext(fileName) == "" {
+			fileName = fileName + filepath.Ext(xi.URL)
+		}
+
 		return &ArticleImage{
 			URL:      xi.URL,
 			FileName: fileName,
