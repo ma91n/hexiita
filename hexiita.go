@@ -45,6 +45,7 @@ type HexoMeta struct {
 }
 
 func (m HexoMeta) WriteHeader(w io.Writer) error {
+	_, _ = fmt.Fprintln(w, "---")
 	_, _ = fmt.Fprintf(w, "title: %s\n", m.Title)
 	_, _ = fmt.Fprintf(w, "date: %s\n", m.Date)
 	_, _ = fmt.Fprintf(w, "postid: %s\n", m.PostID)
