@@ -40,7 +40,6 @@ type HexoMeta struct {
 	Category  string
 	Thumbnail string
 	Author    string
-	Featured  bool
 	Lede      string
 }
 
@@ -57,7 +56,6 @@ func (m HexoMeta) WriteHeader(w io.Writer) error {
 	_, _ = fmt.Fprintf(w, "  - %s\n", m.Category)
 	_, _ = fmt.Fprintf(w, "thumbnail: %s\n", m.Thumbnail)
 	_, _ = fmt.Fprintf(w, "author: %s\n", m.Author)
-	_, _ = fmt.Fprintf(w, "featured: %v\n", m.Featured)
 	_, _ = fmt.Fprintf(w, "lede: %s\n", m.Lede)
 	_, _ = fmt.Fprintln(w, "---")
 	return nil
@@ -396,7 +394,7 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 
 		// 拡張子がない場合はURLから取得
 		if filepath.Ext(fileName) == "" {
-			fileName = fileName  + filepath.Ext(url)
+			fileName = fileName + filepath.Ext(url)
 		}
 
 		// https://github.com/laqiiz/hexiita/issues/22
