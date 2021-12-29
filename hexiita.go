@@ -259,7 +259,6 @@ func main() {
 		Category:  category,
 		Thumbnail: path.Join("/images", ymd, "thumbnail"+thumbnailExt),
 		Author:    author,
-		Featured:  true,
 		Lede:      "\"" + lede + "\"",
 	}
 
