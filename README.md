@@ -20,7 +20,7 @@ git clone --depth 1  https://github.com/future-architect/future-architect.github
 cd tech-blog
 
 # [Windowsの場合]hexoの生成先を future-architect.github.ioにする
-mklink /J public ../future-architect.github.io.git
+mklink /J public %USER_PROFILE%/future-architect.github.io.git
 ```
 
 ## Usage
