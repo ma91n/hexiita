@@ -12,11 +12,11 @@ go install github.com/ma91n/hexiita@latest
 
 ```sh
 cd <user-home> # Win:%USER_PROFILE% Mac:~
-git clone https://github.com/future-architect/tech-blog.git
+git clone --depth 1 https://github.com/future-architect/tech-blog.git
 cd tech-blog
 npm install
 cd ../
-git clone https://github.com/future-architect/future-architect.github.io.git
+git clone --depth 1  https://github.com/future-architect/future-architect.github.io.git
 cd tech-blog
 
 # [Windowsの場合]hexoの生成先を future-architect.github.ioにする
