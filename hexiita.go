@@ -161,6 +161,7 @@ func main() {
 				regex := regexp.MustCompile(`\(.*\)`) // リンクがLedeに出ると可読性に欠けるので削除
 				simpleLine := regex.ReplaceAllString(line, "")
 				lede = lede + strings.ReplaceAll(simpleLine, "**", "") // BOLDは削除しておく
+				lede = strings.ReplaceAll(lede, "\"", "")              // ダブルクォートを削除
 			}
 		}
 
