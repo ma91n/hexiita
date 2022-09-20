@@ -10,7 +10,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -184,13 +183,13 @@ func main() {
 
 			a, err := download(imageRoot, articleImage)
 			if err != nil {
-				log.Fatal("download image", err)
+				log.Fatal("download image: ", err)
 			}
 			articleImage = a
 
 			if thumbnail {
 				if err := downloadWithThumbnail(imageRoot, articleImage); err != nil {
-					log.Fatal("download image", err)
+					log.Fatal("download thumbnail image: ", err)
 				}
 				thumbnailExt = filepath.Ext(articleImage.FileName)
 				thumbnail = false
@@ -296,12 +295,14 @@ func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 		return nil, fmt.Errorf("create image file: %w", err)
 	}
 	defer file.Close()
-	img, err := ioutil.ReadAll(imgResp.Body)
+	img, err := io.ReadAll(imgResp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	if articleImage.MaxWidthPx != 0 {
+	ext := strings.Replace(strings.ToLower(filepath.Ext(articleImage.FileName)), ".jpeg", ".jpg", 1)
+
+	if articleImage.MaxWidthPx != 0 && ext != ".svg" { // svg の場合はresize不要
 		// resize target
 		imgSrc, _, err := image.Decode(bytes.NewBuffer(img))
 		if err != nil {
@@ -319,8 +320,6 @@ func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 
 			articleImage.Width = resizedImg.Bounds().Max.X - resizedImg.Bounds().Min.X
 			articleImage.Height = resizedImg.Bounds().Max.Y - resizedImg.Bounds().Min.Y
-
-			ext := strings.Replace(strings.ToLower(filepath.Ext(articleImage.FileName)), ".jpeg", ".jpg", 1)
 
 			if ext == ".jpg" {
 				return articleImage, jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 100})
@@ -391,19 +390,24 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		end := strings.Index(line[start:], ")") + start
 		url := line[start:end]
 
+		// https://github.com/laqiiz/hexiita/issues/22
+		// ![2020-09-23_20h26_14.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/717995/8e698035-ea79-cf21-ce93-f70b770e0e15.png "実装した画面")
+		url = strings.Split(url, " ")[0]
+
+		altText := fileName
+		if len(strings.Split(url, " ")) > 1 {
+			altText = strings.Split(url, " ")[1]
+		}
+
 		// 拡張子がない場合はURLから取得
 		if filepath.Ext(fileName) == "" {
 			fileName = fileName + filepath.Ext(url)
 		}
 
-		// https://github.com/laqiiz/hexiita/issues/22
-		// ![2020-09-23_20h26_14.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/717995/8e698035-ea79-cf21-ce93-f70b770e0e15.png "実装した画面")
-		url = strings.Split(url, " ")[0]
-
 		return &ArticleImage{
 			URL:      url,
 			FileName: fileName,
-			AltText:  fileName,
+			AltText:  altText,
 			HasImage: true,
 		}, nil
 	}
