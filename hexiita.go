@@ -144,6 +144,8 @@ func main() {
 
 				// https://github.com/laqiiz/hexiita/issues/18
 				escapedTitle := strings.ReplaceAll(title, "/", "／")
+				//#44 コロンもエスケープが必要
+				escapedTitle = strings.ReplaceAll(escapedTitle, ":", "：")
 
 				articleFileName = filepath.Join(postRoot, ymd+"_"+strings.ReplaceAll(escapedTitle, " ", "_")+".md")
 			}
@@ -238,7 +240,7 @@ func main() {
 			category = "DB"
 			updateTags = remove(tags, i)
 		} else if strings.ToLower(tag) == "culture" {
-			category = "culture"
+			category = "Culture"
 			updateTags = remove(tags, i)
 		} else if strings.ToLower(tag) == "datascience" {
 			category = "DataScience"
@@ -270,7 +272,7 @@ func main() {
 
 	file, err := os.OpenFile(articleFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
-		log.Fatal("create post file: ", articleFileName, err)
+		log.Fatalf("create post file(%s): %v", articleFileName, err)
 	}
 	defer file.Close()
 
