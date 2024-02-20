@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"encoding/xml"
 	"fmt"
 	"image"
@@ -124,7 +125,11 @@ func main() {
 		url = url + ".md"
 	}
 
-	resp, err := http.Get(url)
+	hc := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+
+	resp, err := hc.Get(url)
 	if err != nil {
 		log.Fatal("cannot access qiita url page", err)
 	}
@@ -293,7 +298,11 @@ func main() {
 }
 
 func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
-	imgResp, err := http.Get(articleImage.URL)
+	hc := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+
+	imgResp, err := hc.Get(articleImage.URL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot access image url: %w", err)
 	}
