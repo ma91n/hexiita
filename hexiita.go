@@ -99,11 +99,7 @@ func main() {
 		log.Fatal("ymd is invalid format")
 	}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal("cannot get user home", err)
-	}
-	blogRoot := filepath.Join(home, "tech-blog", "source")
+	blogRoot := filepath.Join(".", "source")
 	postRoot := filepath.Join(blogRoot, "_posts")
 	imageRoot := filepath.Join(blogRoot, "images", ymd)
 	if err := os.MkdirAll(imageRoot, 0777); err != nil {
