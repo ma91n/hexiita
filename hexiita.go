@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"image"
 	"image/gif"
@@ -22,6 +23,8 @@ import (
 	"time"
 
 	"github.com/nfnt/resize"
+
+	_ "image/png"
 )
 
 // サムネイル画像のMax width [px]
@@ -293,11 +296,11 @@ func main() {
 	fmt.Println("finished")
 }
 
-func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
-	hc := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}}
+var hc = &http.Client{Transport: &http.Transport{
+	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+}}
 
+func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 	imgResp, err := hc.Get(articleImage.URL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot access image url: %w", err)
@@ -309,6 +312,7 @@ func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 		return nil, fmt.Errorf("create image file: %w", err)
 	}
 	defer file.Close()
+
 	img, err := io.ReadAll(imgResp.Body)
 	if err != nil {
 		return nil, err
@@ -320,6 +324,13 @@ func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 		// resize target
 		imgSrc, _, err := image.Decode(bytes.NewBuffer(img))
 		if err != nil {
+			if errors.Is(err, image.ErrFormat) {
+				// オリジナルを出力にフォールバック
+				if _, err = io.Copy(file, bytes.NewBuffer(img)); err != nil {
+					return nil, fmt.Errorf("fallback write image file to local: %w", err)
+				}
+				return articleImage, nil
+			}
 			fmt.Fprintf(os.Stderr, "%+v\n", articleImage)
 			return nil, err
 		}
