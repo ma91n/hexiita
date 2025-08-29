@@ -107,8 +107,12 @@ func main() {
 	blogRoot := filepath.Join(".", "source")
 	postRoot := filepath.Join(blogRoot, "_posts", year)
 	imageRoot := filepath.Join(blogRoot, "images", year, ymd)
+
+	if err := os.MkdirAll(postRoot, 0777); err != nil {
+		log.Fatal("mkdir post dir", err)
+	}
 	if err := os.MkdirAll(imageRoot, 0777); err != nil {
-		fmt.Println("mkdir", err)
+		fmt.Println("mkdir image dir", err)
 	}
 
 	var (
