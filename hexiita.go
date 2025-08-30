@@ -92,6 +92,7 @@ func main() {
 	}
 
 	fmt.Println(ymd, postID)
+	year := ymd[0:4]
 
 	if len(ymd) != 8 {
 		log.Fatal("ymd must be YYYYMMDD format")
@@ -104,10 +105,14 @@ func main() {
 	}
 
 	blogRoot := filepath.Join(".", "source")
-	postRoot := filepath.Join(blogRoot, "_posts")
-	imageRoot := filepath.Join(blogRoot, "images", ymd)
+	postRoot := filepath.Join(blogRoot, "_posts", year)
+	imageRoot := filepath.Join(blogRoot, "images", year, ymd)
+
+	if err := os.MkdirAll(postRoot, 0777); err != nil {
+		log.Fatal("mkdir post dir", err)
+	}
 	if err := os.MkdirAll(imageRoot, 0777); err != nil {
-		fmt.Println("mkdir", err)
+		fmt.Println("mkdir image dir", err)
 	}
 
 	var (
@@ -205,9 +210,9 @@ func main() {
 			// Alt textはHexoで表示されてしまうのでなしにする。本当はあった方が良いとは思う
 			var imgLine string
 			if articleImage.Width == 0 {
-				imgLine = fmt.Sprintf(`<img src="%s" alt="%s" loading="lazy">`, path.Join("/images", ymd, "", articleImage.FileName), articleImage.AltText)
+				imgLine = fmt.Sprintf(`<img src="%s" alt="%s" loading="lazy">`, path.Join("/images", year, ymd, "", articleImage.FileName), articleImage.AltText)
 			} else {
-				imgLine = fmt.Sprintf(`<img src="%s" alt="%s" width="%d" height="%d" loading="lazy">`, path.Join("/images", ymd, "", articleImage.FileName), articleImage.AltText, articleImage.Width, articleImage.Height)
+				imgLine = fmt.Sprintf(`<img src="%s" alt="%s" width="%d" height="%d" loading="lazy">`, path.Join("/images", year, ymd, "", articleImage.FileName), articleImage.AltText, articleImage.Width, articleImage.Height)
 			}
 
 			hexoArticleContents = append(hexoArticleContents, imgLine)
@@ -269,7 +274,7 @@ func main() {
 		PostID:    postID,
 		Tags:      updateTags,
 		Category:  category,
-		Thumbnail: path.Join("/images", ymd, "thumbnail"+thumbnailExt),
+		Thumbnail: path.Join("/images", year, ymd, "thumbnail"+thumbnailExt),
 		Author:    author,
 		Lede:      "\"" + lede + "\"",
 	}
