@@ -13,3 +13,6 @@
 
 # Goland
 .idea
+
+# ビルド成果物
+/hexiita
