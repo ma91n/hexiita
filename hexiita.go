@@ -51,11 +51,11 @@ func (m HexoMeta) WriteHeader(w io.Writer) error {
 	_, _ = fmt.Fprintf(w, "title: %s\n", m.Title)
 	_, _ = fmt.Fprintf(w, "date: %s\n", m.Date)
 	_, _ = fmt.Fprintf(w, "postid: %s\n", m.PostID)
-	_, _ = fmt.Fprintf(w, "tag:\n")
+	_, _ = fmt.Fprintf(w, "tags:\n")
 	for _, tag := range m.Tags {
 		_, _ = fmt.Fprintf(w, "  - %s\n", tag)
 	}
-	_, _ = fmt.Fprintf(w, "category:\n")
+	_, _ = fmt.Fprintf(w, "categories:\n")
 	_, _ = fmt.Fprintf(w, "  - %s\n", m.Category)
 	_, _ = fmt.Fprintf(w, "thumbnail: %s\n", m.Thumbnail)
 	_, _ = fmt.Fprintf(w, "author: %s\n", m.Author)
