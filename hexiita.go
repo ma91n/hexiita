@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/xml"
 	"errors"
+	"flag"
 	"fmt"
 	"image"
 	"image/gif"
@@ -35,12 +36,33 @@ const (
 
 var fileNameMap = map[string]int{}
 
+// 連載への所属。値がそのまま連載名として表示されるので、連載ごとに表記を揃える。
+// フラグは位置引数より前に置く必要がある（Goのflagは最初の非フラグ引数で解釈を止める）
+var (
+	series  = flag.String("series", "", `連載名。指定すると series フロントマターを出力する（例: -series "Go1.27リリース"）`)
+	isIndex = flag.Bool("index", false, "連載の索引記事として インデックス タグを足す")
+)
+
+// 表示は「連載：<値>」になるので、値の末尾に「連載」「企画」を付けると
+// 「連載：サーバレス連載」と重複する。既存71連載はいずれも付けていない
+var redundantSuffix = []string{"連載", "企画", "シリーズ"}
+
+// 連載名としてありがちな崩れを警告する。止めはしない（新しい命名の余地は残す）
+func warnSeriesName(name string) {
+	for _, s := range redundantSuffix {
+		if strings.HasSuffix(name, s) {
+			fmt.Fprintf(os.Stderr, "warning: series %q の末尾の「%s」は不要です。表示は「連載：%s」になります\n", name, s, name)
+		}
+	}
+}
+
 type HexoMeta struct {
 	Title     string
 	Date      string // like: 2020/07/16 10:49:27
 	PostID    string
 	Tags      []string
 	Category  string
+	Series    string // 連載名。空なら series 行そのものを出さない
 	Thumbnail string
 	Author    string
 	Lede      string
@@ -57,6 +79,11 @@ func (m HexoMeta) WriteHeader(w io.Writer) error {
 	}
 	_, _ = fmt.Fprintf(w, "categories:\n")
 	_, _ = fmt.Fprintf(w, "  - %s\n", m.Category)
+	// 連載に属さない記事の方が多いので、指定が無いときは行ごと出さない。
+	// 空の series: を置くと未記入なのか非連載なのか区別が付かなくなる
+	if m.Series != "" {
+		_, _ = fmt.Fprintf(w, "series: %s\n", m.Series)
+	}
 	_, _ = fmt.Fprintf(w, "thumbnail: %s\n", m.Thumbnail)
 	_, _ = fmt.Fprintf(w, "author: %s\n", m.Author)
 	_, _ = fmt.Fprintf(w, "lede: %s\n", m.Lede)
@@ -66,28 +93,38 @@ func (m HexoMeta) WriteHeader(w io.Writer) error {
 
 func main() {
 
-	if len(os.Args) == 1 {
+	flag.Parse()
+	args := flag.Args()
+
+	if len(args) == 0 {
 		log.Fatal("url argument is required")
 	}
 
-	url := os.Args[1]
+	url := args[0]
 	if url == "" {
 		log.Fatal("URL is required variable")
+	}
+
+	if *series != "" {
+		warnSeriesName(*series)
+	}
+	if *isIndex && *series == "" {
+		log.Fatal("-index には -series も必要です。索引は連載に属していないと連載名から辿れません")
 	}
 
 	var postID = "a"
 
 	var ymd string
-	if len(os.Args) == 2 {
+	if len(args) == 1 {
 		ymd = time.Now().Format("20060102")
 		fmt.Println("ymd is", ymd)
 	} else {
-		arg := os.Args[2]
+		arg := args[1]
 		if len(arg) == 9 {
 			ymd = arg[0:8]
 			postID = arg[8:]
 		} else {
-			ymd = os.Args[2]
+			ymd = arg
 		}
 	}
 
@@ -263,9 +300,21 @@ func main() {
 		category = "Infrastructure"
 	}
 
+	// 索引はタグで見分ける。これが無いと連載ナビから索引に戻れなくなる
+	if *isIndex {
+		updateTags = append(updateTags, "インデックス")
+	}
+
 	metaTitle := title
 	if !strings.HasPrefix(title, `"`) {
 		metaTitle = `"` + metaTitle + `"`
+	}
+
+	// 既存記事はすべてクォート付きで揃っている。CI/CD のように記号を含む
+	// 連載名があるので、クォートしないとYAMLの解釈に左右される
+	metaSeries := *series
+	if metaSeries != "" && !strings.HasPrefix(metaSeries, `"`) {
+		metaSeries = `"` + metaSeries + `"`
 	}
 
 	hexoMeta := &HexoMeta{
@@ -274,6 +323,7 @@ func main() {
 		PostID:    postID,
 		Tags:      updateTags,
 		Category:  category,
+		Series:    metaSeries,
 		Thumbnail: path.Join("/images", year, ymd, "thumbnail"+thumbnailExt),
 		Author:    author,
 		Lede:      "\"" + lede + "\"",
