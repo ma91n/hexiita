@@ -362,18 +362,40 @@ func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 	}
 	defer imgResp.Body.Close()
 
-	file, err := os.OpenFile(filepath.Join(dir, articleImage.FileName), os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return nil, fmt.Errorf("create image file: %w", err)
-	}
-	defer file.Close()
-
 	img, err := io.ReadAll(imgResp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	ext := strings.Replace(strings.ToLower(filepath.Ext(articleImage.FileName)), ".jpeg", ".jpg", 1)
+	// ファイル名は中身に合わせてから開く。拡張子だけ .png で中身が AVIF のファイルが
+	// できると、GitHub Pages が AVIF を image/png として配ることになる (#54)
+	articleImage.FileName = correctFileName(articleImage.FileName, img)
+
+	file, err := os.OpenFile(filepath.Join(dir, articleImage.FileName), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("create image file: %w", err)
+	}
+	defer file.Close()
+
+	ext := normalizeExt(filepath.Ext(articleImage.FileName))
+
+	if ext == ".avif" {
+		// Go 標準は AVIF を読めずエンコーダも無いのでリサイズできない。寸法だけ読んで
+		// 原本をそのまま出す。ブログ側は width / height を必須にしている (#54)
+		if w, h, ok := avifSize(img); ok {
+			articleImage.Width = w
+			articleImage.Height = h
+			if articleImage.MaxWidthPx != 0 && w > articleImage.MaxWidthPx {
+				fmt.Fprintf(os.Stderr, "warning: %s は幅 %dpx で上限の %dpx を超えるが、AVIF はリサイズできない\n", articleImage.FileName, w, articleImage.MaxWidthPx)
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: %s の寸法を読めなかった。width / height を手で入れる必要がある\n", articleImage.FileName)
+		}
+		if _, err = io.Copy(file, bytes.NewBuffer(img)); err != nil {
+			return nil, fmt.Errorf("write avif image file to local: %w", err)
+		}
+		return articleImage, nil
+	}
 
 	if articleImage.MaxWidthPx != 0 && ext != ".svg" { // svg の場合はresize不要
 		// resize target
