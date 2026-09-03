@@ -31,7 +31,9 @@ import (
 // サムネイル画像のMax width [px]
 const (
 	MaxThumbnailWidthPx = 300
-	MaxImageWidth       = 1200
+	// ブログの本文列は内寸 948px までなので、2倍DPRの画面が要求する device px の下限。
+	// 1200px だと 3000〜4000px のスクショ・draw.io 図の文字が潰れる (#56)
+	MaxImageWidth = 1920
 )
 
 var fileNameMap = map[string]int{}
@@ -424,7 +426,9 @@ func download(dir string, articleImage *ArticleImage) (*ArticleImage, error) {
 			articleImage.Height = resizedImg.Bounds().Max.Y - resizedImg.Bounds().Min.Y
 
 			if ext == ".jpg" {
-				return articleImage, jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 100})
+				// 100 は容量が90の倍になるだけで見た目が変わらない。1920px の 90 は
+				// 1200px の 100 より軽い（229KB 対 250KB の実測）(#56)
+				return articleImage, jpeg.Encode(file, resizedImg, &jpeg.Options{Quality: 90})
 			} else if ext == ".png" {
 				return articleImage, png.Encode(file, resizedImg)
 			} else if ext == ".gif" {
