@@ -342,7 +342,7 @@ func main() {
 	}
 
 	// 本文の出力
-	for _, line := range hexoArticleContents {
+	for _, line := range tightenLists(hexoArticleContents) {
 		_, err := file.Write([]byte(line))
 		if err != nil {
 			log.Fatal("save post file: ", err)
