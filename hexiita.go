@@ -14,6 +14,7 @@ import (
 	"image/png"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path"
@@ -247,14 +248,7 @@ func main() {
 			}
 
 			// Alt textはHexoで表示されてしまうのでなしにする。本当はあった方が良いとは思う
-			var imgLine string
-			if articleImage.Width == 0 {
-				imgLine = fmt.Sprintf(`<img src="%s" alt="%s" loading="lazy">`, path.Join("/images", year, ymd, "", articleImage.FileName), articleImage.AltText)
-			} else {
-				imgLine = fmt.Sprintf(`<img src="%s" alt="%s" width="%d" height="%d" loading="lazy">`, path.Join("/images", year, ymd, "", articleImage.FileName), articleImage.AltText, articleImage.Width, articleImage.Height)
-			}
-
-			hexoArticleContents = append(hexoArticleContents, imgLine)
+			hexoArticleContents = append(hexoArticleContents, articleImage.Prefix+ImageTag(path.Join("/images", year, ymd, "", articleImage.FileName), articleImage)+articleImage.Suffix)
 			continue
 		}
 
@@ -466,11 +460,17 @@ type ArticleImage struct {
 	MaxWidthPx int
 	Width      int
 	Height     int
+	// 表のセルのように画像が行の一部のとき、画像の前後を残さないと行の構造が壊れる
+	Prefix string
+	Suffix string
+	// 原稿の width 指定。表示サイズを原稿どおりに保つため、実寸より優先する
+	DisplayWidth int
 }
 
 type XMLImage struct {
 	URL      string `xml:"src,attr"`
 	FileName string `xml:"alt,attr"`
+	Width    string `xml:"width,attr"`
 }
 
 func ExtractImageURL(line string) (*ArticleImage, error) {
@@ -492,7 +492,7 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 			fileName = fileName[:15] + filepath.Ext(fileName)
 		}
 
-		start := strings.Index(line, "https")
+		start := strings.Index(line[nameEnd:], "https") + nameEnd
 		end := strings.Index(line[start:], ")") + start
 		url := line[start:end]
 
@@ -515,13 +515,15 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 			FileName: fileName,
 			AltText:  altText,
 			HasImage: true,
+			Prefix:   line[:nameStart-2],
+			Suffix:   line[end+1:],
 		}, nil
 	}
 
 	if strings.Contains(line, "<img") && strings.Contains(line, "src=") {
 
 		tagStart := strings.Index(line, "<img")
-		tagEnd := strings.Index(line, ">") + 1
+		tagEnd := strings.Index(line[tagStart:], ">") + tagStart + 1
 		xmlElm := line[tagStart:tagEnd] + "</img>" // XMLパースのためにタグを追加
 
 		var xi XMLImage
@@ -541,11 +543,16 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 			fileName = fileName + filepath.Ext(xi.URL)
 		}
 
+		displayWidth, _ := strconv.Atoi(strings.TrimSuffix(xi.Width, "px"))
+
 		return &ArticleImage{
-			URL:      xi.URL,
-			FileName: fileName,
-			AltText:  xi.FileName,
-			HasImage: true,
+			URL:          xi.URL,
+			FileName:     fileName,
+			AltText:      xi.FileName,
+			HasImage:     true,
+			Prefix:       line[:tagStart],
+			Suffix:       line[tagEnd:],
+			DisplayWidth: displayWidth,
 		}, nil
 	}
 
@@ -554,6 +561,18 @@ func ExtractImageURL(line string) (*ArticleImage, error) {
 		FileName: "",
 		HasImage: false,
 	}, nil
+}
+
+func ImageTag(src string, a *ArticleImage) string {
+	if a.Width == 0 {
+		return fmt.Sprintf(`<img src="%s" alt="%s" loading="lazy">`, src, a.AltText)
+	}
+	width, height := a.Width, a.Height
+	if a.DisplayWidth > 0 {
+		width = a.DisplayWidth
+		height = int(math.Round(float64(a.Height) * float64(a.DisplayWidth) / float64(a.Width)))
+	}
+	return fmt.Sprintf(`<img src="%s" alt="%s" width="%d" height="%d" loading="lazy">`, src, a.AltText, width, height)
 }
 
 func remove(slice []string, s int) []string {

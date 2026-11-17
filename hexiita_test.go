@@ -87,3 +87,35 @@ func TestWarnSeriesName(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractImageURLInTableCell(t *testing.T) {
+	line := `| <img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/1/abc.png" alt="APM認定バッジ" width="150"> | APM | 11月上旬 | 日本語 |`
+	got, err := ExtractImageURL(line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Prefix != "| " || got.Suffix != " | APM | 11月上旬 | 日本語 |" {
+		t.Errorf("prefix=%q suffix=%q", got.Prefix, got.Suffix)
+	}
+	if got.DisplayWidth != 150 {
+		t.Errorf("DisplayWidth=%d", got.DisplayWidth)
+	}
+
+	got.Width, got.Height = 1200, 600
+	out := got.Prefix + ImageTag("/images/2026/20261117a/APM認定バッジ.png", got) + got.Suffix
+	want := `| <img src="/images/2026/20261117a/APM認定バッジ.png" alt="APM認定バッジ" width="150" height="75" loading="lazy"> | APM | 11月上旬 | 日本語 |`
+	if out != want {
+		t.Errorf("got  %s\nwant %s", out, want)
+	}
+}
+
+func TestExtractImageURLMarkdownInline(t *testing.T) {
+	line := `| ![a.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/1/abc.png) | x |`
+	got, err := ExtractImageURL(line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Prefix != "| " || got.Suffix != " | x |" || got.URL != "https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/1/abc.png" {
+		t.Errorf("prefix=%q suffix=%q url=%q", got.Prefix, got.Suffix, got.URL)
+	}
+}
